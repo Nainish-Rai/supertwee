@@ -1,0 +1,42 @@
+{
+  "name": "supertwee",
+  "version": "0.1.0",
+  "description": "CLI for syncing, ranking, and exploring your X feed locally.",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "supertwee": "./bin/supertwee.mjs",
+    "stw": "./bin/supertwee.mjs"
+  },
+  "scripts": {
+    "start": "node ./bin/supertwee.mjs",
+    "test": "node --test"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "x",
+    "twitter",
+    "feed",
+    "cli",
+    "analytics",
+    "trends",
+    "ranking"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nainish-Rai/supertwee.git"
+  },
+  "homepage": "https://github.com/Nainish-Rai/supertwee#readme",
+  "bugs": {
+    "url": "https://github.com/Nainish-Rai/supertwee/issues"
+  },
+  "license": "MIT"
+}

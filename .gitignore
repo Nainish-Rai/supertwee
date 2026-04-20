@@ -1,0 +1,6 @@
+data/
+tmp-smoke-data/
+node_modules/
+.env
+.env.local
+*.log
