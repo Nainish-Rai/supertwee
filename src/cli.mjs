@@ -1,8 +1,5 @@
-import { loadFeed } from './storage.mjs';
-import { formatTrendReport } from './analyze.mjs';
-import { syncFeed } from './x-client.mjs';
-import { dataDir, loadEnv } from './config.mjs';
-import { diagnoseSessionOptions } from './session.mjs';
+import { runInteractiveUi } from './ui.mjs';
+import { buildDoctorSummary, runExportCommand, runSyncCommand, runTrendsCommand } from './commands.mjs';
 
 function printHelp() {
   console.log(`supertwee
@@ -15,6 +12,9 @@ Usage:
                  [--chrome-profile-directory <name>]
                  [--firefox-profile-dir <path>]
   supertwee trends [--topic-limit 12] [--tweet-limit 10] [--json]
+  supertwee export [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--limit N]
+                   [--format jsonl,md] [--out-dir PATH]
+  supertwee ui
   supertwee doctor
 
 Auth:
@@ -60,18 +60,6 @@ export function parseFlags(argv) {
   return flags;
 }
 
-function envSummary() {
-  loadEnv();
-  return {
-    dataDir: dataDir(),
-    hasCookieHeader: Boolean(process.env.X_COOKIE_HEADER),
-    hasAuthToken: Boolean(process.env.X_AUTH_TOKEN),
-    hasCt0: Boolean(process.env.X_CT0),
-    queryId: process.env.SUPERTWEE_HOME_LATEST_QUERY_ID || process.env.X_HOME_LATEST_QUERY_ID || 'default',
-    session: diagnoseSessionOptions()
-  };
-}
-
 export async function runCli(argv) {
   const [command, ...rest] = argv;
   const flags = parseFlags(rest);
@@ -82,36 +70,18 @@ export async function runCli(argv) {
   }
 
   if (command === 'doctor') {
-    console.log(JSON.stringify(envSummary(), null, 2));
+    console.log(JSON.stringify(buildDoctorSummary(), null, 2));
     return;
   }
 
   if (command === 'sync') {
-    const result = await syncFeed({
-      pages: flags.pages,
-      count: flags.count,
-      delayMs: flags['delay-ms'],
-      enableRanking: Boolean(flags.ranking),
-      cookies: flags.cookies,
-      browser: flags.browser ? String(flags.browser) : undefined,
-      chromeUserDataDir: flags['chrome-user-data-dir'] ? String(flags['chrome-user-data-dir']) : undefined,
-      chromeProfileDirectory: flags['chrome-profile-directory'] ? String(flags['chrome-profile-directory']) : undefined,
-      firefoxProfileDir: flags['firefox-profile-dir'] ? String(flags['firefox-profile-dir']) : undefined
-    });
+    const result = await runSyncCommand(flags);
     console.log(JSON.stringify(result, null, 2));
     return;
   }
 
   if (command === 'trends') {
-    const feed = await loadFeed();
-    if (feed.length === 0) {
-      throw new Error('No feed data found. Run `supertwee sync` first.');
-    }
-
-    const report = formatTrendReport(feed, {
-      topicLimit: Number(flags['topic-limit'] ?? 12),
-      tweetLimit: Number(flags['tweet-limit'] ?? 10)
-    });
+    const report = await runTrendsCommand(flags);
 
     if (flags.json) {
       console.log(JSON.stringify({ topics: report.topics, bangers: report.bangers }, null, 2));
@@ -119,6 +89,17 @@ export async function runCli(argv) {
     }
 
     console.log(report.text);
+    return;
+  }
+
+  if (command === 'export') {
+    const result = await runExportCommand(flags);
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (command === 'ui') {
+    await runInteractiveUi();
     return;
   }
 

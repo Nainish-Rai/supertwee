@@ -43,6 +43,10 @@ export function feedPath() {
   return path.join(dataDir(), 'feed.jsonl');
 }
 
+export function exportsDir() {
+  return path.join(dataDir(), 'exports');
+}
+
 export function metaPath() {
   return path.join(dataDir(), 'feed-meta.json');
 }

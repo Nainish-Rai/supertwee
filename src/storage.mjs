@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { dataDir, feedPath, metaPath } from './config.mjs';
+import { dataDir, exportsDir, feedPath, metaPath } from './config.mjs';
 
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
@@ -8,6 +8,10 @@ async function ensureDir(dirPath) {
 
 export async function ensureDataDir() {
   await ensureDir(dataDir());
+}
+
+export async function ensureExportsDir() {
+  await ensureDir(exportsDir());
 }
 
 export async function readJson(filePath, fallback = null) {
@@ -44,6 +48,11 @@ export async function writeJsonLines(filePath, rows) {
   await fs.writeFile(filePath, content ? `${content}\n` : '', 'utf8');
 }
 
+export async function writeText(filePath, value) {
+  await ensureDir(path.dirname(filePath));
+  await fs.writeFile(filePath, value, 'utf8');
+}
+
 export async function loadFeed() {
   return readJsonLines(feedPath());
 }
@@ -58,4 +67,18 @@ export async function loadMeta() {
 
 export async function saveMeta(meta) {
   return writeJson(metaPath(), meta);
+}
+
+export async function createExportDir(outDir) {
+  if (outDir) {
+    const absolute = path.resolve(outDir);
+    await ensureDir(absolute);
+    return absolute;
+  }
+
+  await ensureExportsDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const absolute = path.join(exportsDir(), timestamp);
+  await ensureDir(absolute);
+  return absolute;
 }

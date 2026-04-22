@@ -15,6 +15,8 @@ it syncs your home timeline, saves it to disk, finds repeated topics, and ranks 
 
 - `sync` fetches pages from the x web timeline using the same internal graphql pattern the web app uses
 - `trends` extracts recurring topics, phrases, domains, hashtags, and standout tweets
+- `export` writes filtered local archive exports as `jsonl` and `markdown`
+- `ui` opens an interactive command hub in the terminal
 - `doctor` shows which auth path supertwee can use on this machine
 
 ## quick start
@@ -27,6 +29,8 @@ npm link
 supertwee doctor
 supertwee sync --pages 5 --count 40
 supertwee trends
+supertwee export --since 2026-04-01 --format jsonl,md
+supertwee ui
 ```
 
 if you do not want to use `npm link`, run the cli directly:
@@ -35,6 +39,8 @@ if you do not want to use `npm link`, run the cli directly:
 node ./bin/supertwee.mjs doctor
 node ./bin/supertwee.mjs sync --pages 5 --count 40
 node ./bin/supertwee.mjs trends
+node ./bin/supertwee.mjs export --limit 100
+node ./bin/supertwee.mjs ui
 ```
 
 ## how it works
@@ -42,7 +48,8 @@ node ./bin/supertwee.mjs trends
 1. `sync` reads your logged-in x browser session or manual cookies.
 2. it fetches timeline pages and stores normalized tweet records in `./data`.
 3. `trends` scores repeated patterns across the saved archive.
-4. it highlights both topic momentum and top-performing tweets.
+4. `export` writes filtered slices as reusable `jsonl` plus a readable markdown report.
+5. `trends` highlights both topic momentum and top-performing tweets.
 
 ## commands
 
@@ -55,6 +62,10 @@ supertwee sync --browser chrome
 supertwee sync --browser firefox
 supertwee trends
 supertwee trends --json
+supertwee export
+supertwee export --since 2026-04-01 --until 2026-04-15 --limit 200
+supertwee export --format md --out-dir ./tmp/export
+supertwee ui
 ```
 
 ## auth
@@ -98,6 +109,10 @@ override it with:
 ```bash
 export SUPERTWEE_DATA_DIR=/absolute/path
 ```
+
+exports are written to `./data/exports/<timestamp>/` unless `--out-dir` is provided.
+
+`supertwee ui` opens a dependency-free interactive menu for `sync`, `trends`, `export`, and `doctor`.
 
 ## what makes a topic trend
 
