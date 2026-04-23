@@ -13,7 +13,17 @@ Prefer the direct repo entrypoint so PATH does not matter:
 node ./bin/supertwee.mjs
 ```
 
-Use the installed `supertwee` binary only if it is already available.
+Repo-local npm usage is also valid:
+
+```bash
+npm start -- doctor
+```
+
+Use this order of preference:
+
+1. `node ./bin/supertwee.mjs ...` from the repo root
+2. `npm start -- ...` from the repo root
+3. installed `supertwee` binary only if it is already available
 
 ## Rules
 
@@ -31,6 +41,12 @@ Run:
 node ./bin/supertwee.mjs doctor
 ```
 
+Equivalent npm form:
+
+```bash
+npm start -- doctor
+```
+
 Use the doctor output to confirm whether browser-session auth or manual cookies are available before attempting feed or search commands.
 
 If auth is broken, stop and surface the exact doctor or cookie problem instead of guessing.
@@ -45,6 +61,12 @@ Refresh the logged-in home feed:
 
 ```bash
 node ./bin/supertwee.mjs sync --pages 5 --count 40
+```
+
+Equivalent npm form:
+
+```bash
+npm start -- sync --pages 5 --count 40
 ```
 
 Use a smaller sync when the user asks for a quick look:
@@ -68,6 +90,12 @@ Use:
 node ./bin/supertwee.mjs trends --json
 ```
 
+Equivalent npm form:
+
+```bash
+npm start -- trends --json
+```
+
 Use this when the task asks for repeated themes, standout tweets, momentum, or "what is my feed amplifying?"
 
 ### Filtered archive export
@@ -76,6 +104,12 @@ Use:
 
 ```bash
 node ./bin/supertwee.mjs export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
+```
+
+Equivalent npm form:
+
+```bash
+npm start -- export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
 ```
 
 Use this when the task needs a reusable slice of the local archive or a human-readable markdown report.
@@ -88,6 +122,12 @@ Use:
 node ./bin/supertwee.mjs search posts --query "ai agents" --count 20
 ```
 
+Equivalent npm form:
+
+```bash
+npm start -- search posts --query "ai agents" --count 20
+```
+
 Use this for keyword, phrase, or topic search on X through the same logged-in web-session method.
 
 ### User tweets
@@ -98,6 +138,12 @@ Use:
 node ./bin/supertwee.mjs user tweets --handle xdevelopers --count 20
 ```
 
+Equivalent npm form:
+
+```bash
+npm start -- user tweets --handle xdevelopers --count 20
+```
+
 Use this when the task is about a specific account's recent posts.
 
 ### Tweet thread or detail
@@ -106,6 +152,12 @@ Use:
 
 ```bash
 node ./bin/supertwee.mjs tweet thread --id 1346889436626259968
+```
+
+Equivalent npm form:
+
+```bash
+npm start -- tweet thread --id 1346889436626259968
 ```
 
 Use this when the task needs a conversation view, thread reconstruction, or reply context around a specific tweet.

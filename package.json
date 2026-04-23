@@ -1,6 +1,6 @@
 {
   "name": "supertwee",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "CLI for syncing, ranking, and exploring your X feed locally.",
   "private": false,
   "type": "module",

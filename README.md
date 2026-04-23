@@ -52,6 +52,18 @@ node ./bin/supertwee.mjs export --limit 100
 node ./bin/supertwee.mjs ui
 ```
 
+you can also run the repo-local cli through npm without linking:
+
+```bash
+npm start -- doctor
+npm start -- sync --pages 5 --count 40
+npm start -- search posts --query "ai agents"
+npm start -- user tweets --handle xdevelopers
+npm start -- tweet thread --id 1346889436626259968
+npm start -- trends
+npm start -- export --limit 100
+```
+
 ## how it works
 
 1. `sync` reads your logged-in x browser session or manual cookies.
@@ -215,6 +227,7 @@ supertwee is for people who spend serious time on x and want a faster way to ans
 
 ```bash
 npm test
+npm start -- doctor
 node ./bin/supertwee.mjs doctor
 ```
 
