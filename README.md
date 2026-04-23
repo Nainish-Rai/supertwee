@@ -14,6 +14,9 @@ it syncs your home timeline, saves it to disk, finds repeated topics, and ranks 
 ## what it does
 
 - `sync` fetches pages from the x web timeline using the same internal graphql pattern the web app uses
+- `search posts` queries x web search using the same logged-in session method
+- `user tweets` pulls a user timeline using the same logged-in session method
+- `tweet thread` fetches a tweet conversation view using the same logged-in session method
 - `trends` extracts recurring topics, phrases, domains, hashtags, and standout tweets
 - `export` writes filtered local archive exports as `jsonl` and `markdown`
 - `ui` opens an interactive command hub in the terminal, including raw last-sync preview
@@ -28,6 +31,9 @@ npm install
 npm link
 supertwee doctor
 supertwee sync --pages 5 --count 40
+supertwee search posts --query "ai agents"
+supertwee user tweets --handle xdevelopers
+supertwee tweet thread --id 1346889436626259968
 supertwee trends
 supertwee export --since 2026-04-01 --format jsonl,md
 supertwee ui
@@ -38,6 +44,9 @@ if you do not want to use `npm link`, run the cli directly:
 ```bash
 node ./bin/supertwee.mjs doctor
 node ./bin/supertwee.mjs sync --pages 5 --count 40
+node ./bin/supertwee.mjs search posts --query "ai agents"
+node ./bin/supertwee.mjs user tweets --handle xdevelopers
+node ./bin/supertwee.mjs tweet thread --id 1346889436626259968
 node ./bin/supertwee.mjs trends
 node ./bin/supertwee.mjs export --limit 100
 node ./bin/supertwee.mjs ui
@@ -61,6 +70,9 @@ supertwee sync --pages 5 --count 40
 supertwee sync --ranking
 supertwee sync --browser chrome
 supertwee sync --browser firefox
+supertwee search posts --query "ai agents" --count 20
+supertwee user tweets --handle xdevelopers --count 20
+supertwee tweet thread --id 1346889436626259968
 supertwee trends
 supertwee trends --json
 supertwee export
@@ -97,6 +109,17 @@ export X_AUTH_TOKEN='...'
 export X_CT0='...'
 ```
 
+the web-session commands also accept manual query id overrides for internal x graphql operations:
+
+```bash
+export SUPERTWEE_SEARCH_TIMELINE_QUERY_ID='...'
+export SUPERTWEE_USER_BY_SCREEN_NAME_QUERY_ID='...'
+export SUPERTWEE_USER_TWEETS_QUERY_ID='...'
+export SUPERTWEE_TWEET_DETAIL_QUERY_ID='...'
+```
+
+or pass `--query-id` directly for a single command. `user tweets` also supports `--lookup-query-id` for the handle-to-user lookup step.
+
 ## output
 
 by default, supertwee writes local data to:
@@ -125,6 +148,18 @@ these files contain the raw records fetched in the current sync run only.
 `supertwee ui` opens a dependency-free interactive menu for `sync`, `preview last sync output`, `trends`, `export`, and `doctor`.
 
 when you run `sync` from `supertwee ui`, it automatically drops into a terminal-only preview menu for the latest raw markdown or json output.
+
+## web-session read commands
+
+the new read commands stay on the same web-session path as `sync`. they do not switch to the official x api.
+
+```bash
+supertwee search posts --query "founder mode" --count 25
+supertwee user tweets --handle xdevelopers --count 20
+supertwee tweet thread --id 1346889436626259968
+```
+
+these commands print json by default so agents can consume them directly.
 
 ## what makes a topic trend
 

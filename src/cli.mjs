@@ -1,5 +1,5 @@
 import { runInteractiveUi } from './ui.mjs';
-import { buildDoctorSummary, runExportCommand, runSyncCommand, runTrendsCommand } from './commands.mjs';
+import { buildDoctorSummary, runExportCommand, runSearchPostsCommand, runSyncCommand, runTrendsCommand, runTweetThreadCommand, runUserTweetsCommand } from './commands.mjs';
 
 function printHelp() {
   console.log(`supertwee
@@ -14,6 +14,12 @@ Usage:
   supertwee trends [--topic-limit 12] [--tweet-limit 10] [--json]
   supertwee export [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--limit N]
                    [--format jsonl,md] [--out-dir PATH]
+  supertwee search posts --query "<query>" [--count N] [--cursor CURSOR]
+                         [--query-id ID] [--browser chrome|brave|firefox]
+  supertwee user tweets --handle <handle> [--user-id ID] [--count N] [--cursor CURSOR]
+                        [--query-id ID] [--lookup-query-id ID]
+                        [--browser chrome|brave|firefox]
+  supertwee tweet thread --id <tweetId> [--query-id ID] [--browser chrome|brave|firefox]
   supertwee ui
   supertwee doctor
 
@@ -96,6 +102,39 @@ export async function runCli(argv) {
     const result = await runExportCommand(flags);
     console.log(JSON.stringify(result, null, 2));
     return;
+  }
+
+  if (command === 'search') {
+    const [resource, ...resourceArgs] = rest;
+    const resourceFlags = parseFlags(resourceArgs);
+    if (resource === 'posts') {
+      const result = await runSearchPostsCommand(resourceFlags);
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    throw new Error(`Unknown search resource: ${resource ?? '(missing)'}`);
+  }
+
+  if (command === 'user') {
+    const [resource, ...resourceArgs] = rest;
+    const resourceFlags = parseFlags(resourceArgs);
+    if (resource === 'tweets') {
+      const result = await runUserTweetsCommand(resourceFlags);
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    throw new Error(`Unknown user resource: ${resource ?? '(missing)'}`);
+  }
+
+  if (command === 'tweet') {
+    const [resource, ...resourceArgs] = rest;
+    const resourceFlags = parseFlags(resourceArgs);
+    if (resource === 'thread') {
+      const result = await runTweetThreadCommand(resourceFlags);
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    throw new Error(`Unknown tweet resource: ${resource ?? '(missing)'}`);
   }
 
   if (command === 'ui') {

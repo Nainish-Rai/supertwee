@@ -10,7 +10,29 @@ export const X_PUBLIC_BEARER =
   'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
 export const DEFAULT_HOME_LATEST_QUERY_ID = 'CRprHpVA12yhsub-KRERIg';
-export const HOME_LATEST_OPERATION = 'HomeLatestTimeline';
+export const WEB_GRAPHQL_OPERATIONS = {
+  homeLatest: {
+    operation: 'HomeLatestTimeline',
+    envVars: ['SUPERTWEE_HOME_LATEST_QUERY_ID', 'X_HOME_LATEST_QUERY_ID'],
+    defaultQueryId: DEFAULT_HOME_LATEST_QUERY_ID
+  },
+  searchTimeline: {
+    operation: 'SearchTimeline',
+    envVars: ['SUPERTWEE_SEARCH_TIMELINE_QUERY_ID', 'X_SEARCH_TIMELINE_QUERY_ID']
+  },
+  userByScreenName: {
+    operation: 'UserByScreenName',
+    envVars: ['SUPERTWEE_USER_BY_SCREEN_NAME_QUERY_ID', 'X_USER_BY_SCREEN_NAME_QUERY_ID']
+  },
+  userTweets: {
+    operation: 'UserTweets',
+    envVars: ['SUPERTWEE_USER_TWEETS_QUERY_ID', 'X_USER_TWEETS_QUERY_ID']
+  },
+  tweetDetail: {
+    operation: 'TweetDetail',
+    envVars: ['SUPERTWEE_TWEET_DETAIL_QUERY_ID', 'X_TWEET_DETAIL_QUERY_ID']
+  }
+};
 
 export const GRAPHQL_FEATURES = {
   responsive_web_graphql_exclude_directive_enabled: true,
@@ -59,8 +81,38 @@ export function lastSyncMarkdownPath() {
   return path.join(dataDir(), 'last-sync.md');
 }
 
+export function resolveWebGraphqlOperation(key) {
+  const operation = WEB_GRAPHQL_OPERATIONS[key];
+  if (!operation) {
+    throw new Error(`Unknown X web GraphQL operation: ${key}`);
+  }
+  return operation;
+}
+
+export function resolveQueryId(key = 'homeLatest', override) {
+  if (override) return String(override).trim();
+
+  const operation = resolveWebGraphqlOperation(key);
+  for (const envVar of operation.envVars) {
+    const value = process.env[envVar]?.trim();
+    if (value) return value;
+  }
+  return operation.defaultQueryId;
+}
+
 export function queryId() {
-  return process.env.SUPERTWEE_HOME_LATEST_QUERY_ID || process.env.X_HOME_LATEST_QUERY_ID || DEFAULT_HOME_LATEST_QUERY_ID;
+  return resolveQueryId('homeLatest');
+}
+
+export function requiredQueryId(key, override) {
+  const resolved = resolveQueryId(key, override);
+  if (resolved) return resolved;
+
+  const operation = resolveWebGraphqlOperation(key);
+  throw new Error(
+    `Missing query id for ${operation.operation}. ` +
+      `Set ${operation.envVars[0]} or pass --query-id for this command.`
+  );
 }
 
 function parseEnvLine(line) {

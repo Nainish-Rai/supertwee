@@ -1,172 +1,11 @@
-import { HOME_LATEST_OPERATION, GRAPHQL_FEATURES, buildTimelineVariables, lastSyncJsonPath, lastSyncMarkdownPath, queryId } from './config.mjs';
-import { buildHeaders, resolveSession } from './session.mjs';
-import { ensureDataDir, loadFeed, saveFeed, saveLastSyncJson, saveLastSyncMarkdown, saveMeta } from './storage.mjs';
+import { lastSyncJsonPath, lastSyncMarkdownPath, queryId } from './config.mjs';
 import { renderRawSyncMarkdown } from './export.mjs';
+import { resolveSession } from './session.mjs';
+import { ensureDataDir, loadFeed, saveFeed, saveLastSyncJson, saveLastSyncMarkdown, saveMeta } from './storage.mjs';
+import { convertTweetToRecord, extractUserResult, fetchGraphqlOperation, normalizeUserResult, parseTimelineResponse, parseTweetDetailResponse } from './x-web-client.mjs';
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function asNumber(value) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : undefined;
-}
-
-function timelineInstructions(json) {
-  return (
-    json?.data?.home?.home_timeline_urt?.instructions ??
-    json?.data?.home?.home_timeline?.instructions ??
-    []
-  );
-}
-
-function flattenTimelineEntries(instructions) {
-  const entries = [];
-  for (const instruction of instructions) {
-    if (instruction?.type === 'TimelineAddEntries' && Array.isArray(instruction.entries)) {
-      entries.push(...instruction.entries);
-    }
-    if (instruction?.type === 'TimelinePinEntry' && instruction.entry) {
-      entries.push(instruction.entry);
-    }
-  }
-  return entries;
-}
-
-function collectTweetResults(entry, output = []) {
-  if (!entry || typeof entry !== 'object') return output;
-
-  const directResult = entry?.content?.itemContent?.tweet_results?.result;
-  if (directResult) output.push(directResult);
-
-  const items = entry?.content?.items;
-  if (Array.isArray(items)) {
-    for (const item of items) {
-      collectTweetResults(item, output);
-    }
-  }
-
-  return output;
-}
-
-function replaceDisplayUrls(text, urlEntities) {
-  let result = text;
-  for (const entity of urlEntities) {
-    if (typeof entity?.url === 'string' && typeof entity?.display_url === 'string') {
-      result = result.split(entity.url).join(entity.display_url);
-    }
-  }
-  return result;
-}
-
-export function convertTweetToRecord(tweetResult, syncedAt = new Date().toISOString()) {
-  const tweet = tweetResult?.tweet ?? tweetResult;
-  const legacy = tweet?.legacy;
-  if (!legacy) return null;
-
-  const tweetId = legacy.id_str ?? tweet?.rest_id;
-  if (!tweetId) return null;
-
-  const userResult = tweet?.core?.user_results?.result;
-  const userLegacy = userResult?.legacy;
-  const userCore = userResult?.core;
-  const urlEntities = legacy?.entities?.urls ?? [];
-  const mediaEntities = legacy?.extended_entities?.media ?? legacy?.entities?.media ?? [];
-  const noteText = tweet?.note_tweet?.note_tweet_results?.result?.text;
-  const baseText = noteText ?? legacy.full_text ?? legacy.text ?? '';
-  const text = replaceDisplayUrls(baseText, urlEntities);
-
-  return {
-    id: tweetId,
-    tweetId,
-    url: `https://x.com/${userCore?.screen_name ?? userLegacy?.screen_name ?? '_'}/status/${tweetId}`,
-    text,
-    postedAt: legacy.created_at ? new Date(legacy.created_at).toISOString() : null,
-    syncedAt,
-    conversationId: legacy.conversation_id_str,
-    language: legacy.lang,
-    sourceApp: legacy.source,
-    authorHandle: userCore?.screen_name ?? userLegacy?.screen_name,
-    authorName: userCore?.name ?? userLegacy?.name,
-    authorProfileImageUrl:
-      userResult?.avatar?.image_url ?? userLegacy?.profile_image_url_https ?? userLegacy?.profile_image_url,
-    author: userResult
-      ? {
-          id: userResult.rest_id,
-          handle: userCore?.screen_name ?? userLegacy?.screen_name,
-          name: userCore?.name ?? userLegacy?.name,
-          profileImageUrl:
-            userResult?.avatar?.image_url ?? userLegacy?.profile_image_url_https ?? userLegacy?.profile_image_url,
-          description: userLegacy?.description,
-          verified: Boolean(userResult?.is_blue_verified ?? userLegacy?.verified),
-          followersCount: asNumber(userLegacy?.followers_count),
-          followingCount: asNumber(userLegacy?.friends_count),
-          statusesCount: asNumber(userLegacy?.statuses_count)
-        }
-      : undefined,
-    engagement: {
-      likeCount: asNumber(legacy.favorite_count),
-      repostCount: asNumber(legacy.retweet_count),
-      replyCount: asNumber(legacy.reply_count),
-      quoteCount: asNumber(legacy.quote_count),
-      bookmarkCount: asNumber(legacy.bookmark_count),
-      viewCount: asNumber(tweet?.views?.count)
-    },
-    mediaObjects: mediaEntities.map((media) => ({
-      type: media?.type,
-      mediaUrl: media?.media_url_https ?? media?.media_url,
-      expandedUrl: media?.expanded_url,
-      previewUrl: media?.media_url_https ?? media?.media_url,
-      altText: media?.ext_alt_text,
-      width: media?.original_info?.width,
-      height: media?.original_info?.height,
-      videoVariants: Array.isArray(media?.video_info?.variants)
-        ? media.video_info.variants
-            .filter((variant) => variant?.content_type === 'video/mp4')
-            .map((variant) => ({
-              url: variant.url,
-              contentType: variant.content_type,
-              bitrate: asNumber(variant.bitrate)
-            }))
-        : undefined
-    })),
-    links: urlEntities.map((entity) => entity?.expanded_url ?? entity?.url).filter(Boolean),
-    ingestedVia: 'graphql'
-  };
-}
-
-export function parseHomeLatestTimelineResponse(json, syncedAt = new Date().toISOString()) {
-  const instructions = timelineInstructions(json);
-  const entries = flattenTimelineEntries(instructions);
-  const seen = new Set();
-  const records = [];
-  let nextCursor;
-
-  for (const entry of entries) {
-    const cursorType = entry?.content?.cursorType;
-    if (cursorType === 'Bottom') {
-      nextCursor = entry?.content?.value;
-    }
-
-    const tweetResults = collectTweetResults(entry);
-    for (const tweetResult of tweetResults) {
-      const record = convertTweetToRecord(tweetResult, syncedAt);
-      if (!record || seen.has(record.id)) continue;
-      seen.add(record.id);
-      records.push(record);
-    }
-  }
-
-  return { records, nextCursor, errors: json?.errors ?? [] };
-}
-
-function buildTimelineUrl(options = {}) {
-  const variables = buildTimelineVariables(options);
-  const params = new URLSearchParams({
-    variables: JSON.stringify(variables),
-    features: JSON.stringify(GRAPHQL_FEATURES)
-  });
-  return `https://x.com/i/api/graphql/${queryId()}/${HOME_LATEST_OPERATION}?${params.toString()}`;
 }
 
 function recordQualityScore(record) {
@@ -177,6 +16,12 @@ function recordQualityScore(record) {
   if ((record.mediaObjects?.length ?? 0) > 0) score += 2;
   if ((record.links?.length ?? 0) > 0) score += 1;
   return score;
+}
+
+export { convertTweetToRecord };
+
+export function parseHomeLatestTimelineResponse(json, syncedAt = new Date().toISOString()) {
+  return parseTimelineResponse(json, syncedAt);
 }
 
 export function mergeFeedRecords(existing, incoming) {
@@ -192,22 +37,177 @@ export function mergeFeedRecords(existing, incoming) {
   return Array.from(byId.values()).sort((a, b) => String(b.postedAt ?? b.syncedAt).localeCompare(String(a.postedAt ?? a.syncedAt)));
 }
 
-async function fetchTimelinePage(session, options = {}) {
-  const response = await fetch(buildTimelineUrl(options), {
-    method: 'GET',
-    headers: buildHeaders(session)
-  });
+function buildHomeLatestVariables(options = {}) {
+  const variables = {
+    count: options.count ?? 40,
+    includePromotedContent: options.includePromotedContent ?? false,
+    latestControlAvailable: true,
+    requestContext: 'launch',
+    seenTweetIds: [],
+    withCommunity: true
+  };
+  if (options.cursor) variables.cursor = options.cursor;
+  if (options.enableRanking) variables.enableRanking = true;
+  return variables;
+}
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `HomeLatestTimeline returned HTTP ${response.status}. ` +
-        `Response: ${text.slice(0, 300)}. ` +
-        'If X rotated queryIds or required features, update X_HOME_LATEST_QUERY_ID or refresh feature flags from live browser traffic.'
-    );
+function buildSearchTimelineVariables(options = {}) {
+  const variables = {
+    rawQuery: options.query,
+    count: Math.max(1, Number(options.count ?? 20)),
+    querySource: options.querySource ?? 'typed_query',
+    product: options.product ?? 'Latest'
+  };
+  if (options.cursor) variables.cursor = options.cursor;
+  return variables;
+}
+
+function buildUserByScreenNameVariables(handle) {
+  return {
+    screen_name: String(handle).replace(/^@/, ''),
+    withSafetyModeUserFields: true
+  };
+}
+
+function buildUserTweetsVariables(options = {}) {
+  const variables = {
+    userId: options.userId,
+    count: Math.max(1, Number(options.count ?? 20)),
+    includePromotedContent: false,
+    withQuickPromoteEligibilityTweetFields: true,
+    withVoice: true,
+    withV2Timeline: true
+  };
+  if (options.cursor) variables.cursor = options.cursor;
+  return variables;
+}
+
+function buildTweetDetailVariables(tweetId) {
+  return {
+    focalTweetId: tweetId,
+    referrer: 'tweet',
+    with_rux_injections: false,
+    includePromotedContent: false,
+    withCommunity: true,
+    withQuickPromoteEligibilityTweetFields: true,
+    withBirdwatchNotes: true,
+    withVoice: true
+  };
+}
+
+async function fetchTimelinePage(session, options = {}) {
+  const response = await fetchGraphqlOperation(session, 'homeLatest', {
+    queryId: options.queryId,
+    variables: buildHomeLatestVariables(options)
+  });
+  return parseHomeLatestTimelineResponse(response.json);
+}
+
+export async function searchPosts(options = {}) {
+  if (!options.query) {
+    throw new Error('Expected --query for `supertwee search posts`.');
   }
 
-  return parseHomeLatestTimelineResponse(await response.json());
+  const session = resolveSession(options);
+  const response = await fetchGraphqlOperation(session, 'searchTimeline', {
+    queryId: options.queryId,
+    variables: buildSearchTimelineVariables(options)
+  });
+  const parsed = parseTimelineResponse(response.json);
+
+  return {
+    query: options.query,
+    records: parsed.records,
+    nextCursor: parsed.nextCursor,
+    queryId: response.queryId
+  };
+}
+
+export async function lookupUserByHandle(options = {}) {
+  const handle = String(options.handle ?? '').trim().replace(/^@/, '');
+  if (!handle) {
+    throw new Error('Expected --handle for `supertwee user tweets` when --user-id is not provided.');
+  }
+
+  const session = resolveSession(options);
+  const response = await fetchGraphqlOperation(session, 'userByScreenName', {
+    queryId: options.lookupQueryId,
+    variables: buildUserByScreenNameVariables(handle)
+  });
+  const rawUser = extractUserResult(response.json);
+  const user = normalizeUserResult(rawUser);
+  if (!user) {
+    throw new Error(`Could not resolve @${handle} from X web response.`);
+  }
+
+  return {
+    handle: user.handle,
+    user,
+    queryId: response.queryId
+  };
+}
+
+export async function fetchUserTweets(options = {}) {
+  let userId = options.userId ? String(options.userId) : null;
+  let user = null;
+  let handle = options.handle ? String(options.handle).replace(/^@/, '') : null;
+  let lookupQueryId = null;
+
+  if (!userId) {
+    const lookup = await lookupUserByHandle(options);
+    userId = lookup.user.id;
+    user = lookup.user;
+    handle = lookup.user.handle;
+    lookupQueryId = lookup.queryId;
+  }
+
+  const session = resolveSession(options);
+  const response = await fetchGraphqlOperation(session, 'userTweets', {
+    queryId: options.queryId,
+    variables: buildUserTweetsVariables({
+      userId,
+      count: options.count,
+      cursor: options.cursor
+    })
+  });
+  const parsed = parseTimelineResponse(response.json);
+  if (!user) {
+    const rawUser = extractUserResult(response.json);
+    user = normalizeUserResult(rawUser) ?? null;
+    handle = user?.handle ?? handle ?? null;
+  }
+
+  return {
+    handle,
+    userId,
+    user,
+    records: parsed.records,
+    nextCursor: parsed.nextCursor,
+    queryIds: {
+      lookup: lookupQueryId,
+      tweets: response.queryId
+    }
+  };
+}
+
+export async function fetchTweetThread(options = {}) {
+  const tweetId = String(options.id ?? options.tweetId ?? '').trim();
+  if (!tweetId) {
+    throw new Error('Expected --id for `supertwee tweet thread`.');
+  }
+
+  const session = resolveSession(options);
+  const response = await fetchGraphqlOperation(session, 'tweetDetail', {
+    queryId: options.queryId,
+    variables: buildTweetDetailVariables(tweetId)
+  });
+  const parsed = parseTweetDetailResponse(response.json);
+
+  return {
+    tweetId,
+    records: parsed.records,
+    queryId: response.queryId
+  };
 }
 
 export async function syncFeed(options = {}) {
@@ -227,7 +227,8 @@ export async function syncFeed(options = {}) {
     const result = await fetchTimelinePage(session, {
       count: options.count ?? 40,
       cursor: cursor ?? undefined,
-      enableRanking: Boolean(options.enableRanking)
+      enableRanking: Boolean(options.enableRanking),
+      queryId: options.queryId
     });
 
     merged = mergeFeedRecords(merged, result.records);
