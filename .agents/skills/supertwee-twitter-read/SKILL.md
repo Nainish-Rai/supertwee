@@ -5,25 +5,26 @@ description: Use the supertwee CLI to read and analyze X/Twitter data through th
 
 # Supertwee Twitter Read
 
-Use this skill from the `supertwee` repo root.
-
-Prefer the direct repo entrypoint so PATH does not matter:
+Prefer package usage first when the package is available:
 
 ```bash
-node ./bin/supertwee.mjs
+npx supertwee doctor
 ```
 
-Repo-local npm usage is also valid:
+Global install is also valid:
 
 ```bash
-npm start -- doctor
+supertwee doctor
 ```
 
 Use this order of preference:
 
-1. `node ./bin/supertwee.mjs ...` from the repo root
-2. `npm start -- ...` from the repo root
-3. installed `supertwee` binary only if it is already available
+1. `npx supertwee ...`
+2. installed `supertwee` binary if it is already available
+3. `node ./bin/supertwee.mjs ...` from the repo root
+4. `npm start -- ...` from the repo root
+
+If you use the repo-local forms, run them from the `supertwee` repo root.
 
 ## Rules
 
@@ -38,13 +39,22 @@ Use this order of preference:
 Run:
 
 ```bash
+npx supertwee doctor
+```
+
+Equivalent forms:
+
+```bash
+npm install -g supertwee && supertwee doctor
+npm start -- doctor
 node ./bin/supertwee.mjs doctor
 ```
 
-Equivalent npm form:
+If `npx supertwee` fails because the package is not published or not reachable, fall back to the repo-local forms:
 
 ```bash
 npm start -- doctor
+node ./bin/supertwee.mjs doctor
 ```
 
 Use the doctor output to confirm whether browser-session auth or manual cookies are available before attempting feed or search commands.
@@ -60,13 +70,15 @@ Use these commands based on the task:
 Refresh the logged-in home feed:
 
 ```bash
-node ./bin/supertwee.mjs sync --pages 5 --count 40
+npx supertwee sync --pages 5 --count 40
 ```
 
 Equivalent npm form:
 
 ```bash
+npm install -g supertwee && supertwee sync --pages 5 --count 40
 npm start -- sync --pages 5 --count 40
+node ./bin/supertwee.mjs sync --pages 5 --count 40
 ```
 
 Use a smaller sync when the user asks for a quick look:
@@ -87,13 +99,15 @@ Use `data/last-sync.json` when the task needs the raw current-run feed records.
 Use:
 
 ```bash
-node ./bin/supertwee.mjs trends --json
+npx supertwee trends --json
 ```
 
 Equivalent npm form:
 
 ```bash
+npm install -g supertwee && supertwee trends --json
 npm start -- trends --json
+node ./bin/supertwee.mjs trends --json
 ```
 
 Use this when the task asks for repeated themes, standout tweets, momentum, or "what is my feed amplifying?"
@@ -103,13 +117,15 @@ Use this when the task asks for repeated themes, standout tweets, momentum, or "
 Use:
 
 ```bash
-node ./bin/supertwee.mjs export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
+npx supertwee export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
 ```
 
 Equivalent npm form:
 
 ```bash
+npm install -g supertwee && supertwee export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
 npm start -- export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
+node ./bin/supertwee.mjs export --since 2026-04-01 --until 2026-04-15 --limit 200 --format jsonl,md
 ```
 
 Use this when the task needs a reusable slice of the local archive or a human-readable markdown report.
@@ -119,13 +135,15 @@ Use this when the task needs a reusable slice of the local archive or a human-re
 Use:
 
 ```bash
-node ./bin/supertwee.mjs search posts --query "ai agents" --count 20
+npx supertwee search posts --query "ai agents" --count 20
 ```
 
 Equivalent npm form:
 
 ```bash
+npm install -g supertwee && supertwee search posts --query "ai agents" --count 20
 npm start -- search posts --query "ai agents" --count 20
+node ./bin/supertwee.mjs search posts --query "ai agents" --count 20
 ```
 
 Use this for keyword, phrase, or topic search on X through the same logged-in web-session method.
@@ -135,13 +153,15 @@ Use this for keyword, phrase, or topic search on X through the same logged-in we
 Use:
 
 ```bash
-node ./bin/supertwee.mjs user tweets --handle xdevelopers --count 20
+npx supertwee user tweets --handle xdevelopers --count 20
 ```
 
 Equivalent npm form:
 
 ```bash
+npm install -g supertwee && supertwee user tweets --handle xdevelopers --count 20
 npm start -- user tweets --handle xdevelopers --count 20
+node ./bin/supertwee.mjs user tweets --handle xdevelopers --count 20
 ```
 
 Use this when the task is about a specific account's recent posts.
@@ -151,13 +171,15 @@ Use this when the task is about a specific account's recent posts.
 Use:
 
 ```bash
-node ./bin/supertwee.mjs tweet thread --id 1346889436626259968
+npx supertwee tweet thread --id 1346889436626259968
 ```
 
 Equivalent npm form:
 
 ```bash
+npm install -g supertwee && supertwee tweet thread --id 1346889436626259968
 npm start -- tweet thread --id 1346889436626259968
+node ./bin/supertwee.mjs tweet thread --id 1346889436626259968
 ```
 
 Use this when the task needs a conversation view, thread reconstruction, or reply context around a specific tweet.
@@ -184,9 +206,9 @@ Do not invent query ids. If they are missing, report that clearly.
 If needed, use the same overrides as `sync`:
 
 ```bash
-node ./bin/supertwee.mjs sync --browser chrome
-node ./bin/supertwee.mjs sync --browser firefox
-node ./bin/supertwee.mjs sync --cookies <ct0> <auth_token>
+npx supertwee sync --browser chrome
+npx supertwee sync --browser firefox
+npx supertwee sync --cookies <ct0> <auth_token>
 ```
 
 The same session options can be passed to `search posts`, `user tweets`, and `tweet thread`.
