@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { exportFeedArchive, filterExportRecords, parseExportFormats, renderMarkdownExport, buildExportReport } from '../src/export.mjs';
+import { buildExportReport, exportFeedArchive, filterExportRecords, parseExportFormats, renderMarkdownExport, renderRawSyncMarkdown } from '../src/export.mjs';
 import { parseFlags } from '../src/cli.mjs';
 
 const sampleRecords = [
@@ -102,6 +102,17 @@ test('renderMarkdownExport includes empty-state note when no rows match', () => 
 
   assert.match(markdown, /no records matched the requested filters/i);
   assert.match(markdown, /records exported: 0/);
+});
+
+test('renderRawSyncMarkdown emits raw records for the current sync run', () => {
+  const markdown = renderRawSyncMarkdown(sampleRecords.slice(0, 2), {
+    syncedAt: '2026-04-22T10:00:00.000Z'
+  });
+
+  assert.match(markdown, /records fetched this run: 2/);
+  assert.match(markdown, /```json/);
+  assert.match(markdown, /https:\/\/x\.com\/carol\/status\/3/);
+  assert.match(markdown, /"authorHandle": "bob"/);
 });
 
 test('exportFeedArchive writes jsonl and markdown outputs', async () => {

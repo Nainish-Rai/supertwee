@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { dataDir, exportsDir, feedPath, metaPath } from './config.mjs';
+import { dataDir, exportsDir, feedPath, metaPath, lastSyncJsonPath, lastSyncMarkdownPath } from './config.mjs';
 
 async function ensureDir(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
@@ -26,6 +26,15 @@ export async function readJson(filePath, fallback = null) {
 export async function writeJson(filePath, value) {
   await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+export async function readText(filePath, fallback = null) {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return fallback;
+    throw error;
+  }
 }
 
 export async function readJsonLines(filePath) {
@@ -67,6 +76,22 @@ export async function loadMeta() {
 
 export async function saveMeta(meta) {
   return writeJson(metaPath(), meta);
+}
+
+export async function saveLastSyncJson(records) {
+  return writeJson(lastSyncJsonPath(), records);
+}
+
+export async function saveLastSyncMarkdown(content) {
+  return writeText(lastSyncMarkdownPath(), content);
+}
+
+export async function loadLastSyncJson() {
+  return readJson(lastSyncJsonPath(), null);
+}
+
+export async function loadLastSyncMarkdown() {
+  return readText(lastSyncMarkdownPath(), null);
 }
 
 export async function createExportDir(outDir) {

@@ -1,9 +1,10 @@
 import { loadFeed, loadMeta } from './storage.mjs';
 import { formatTrendReport } from './analyze.mjs';
 import { syncFeed } from './x-client.mjs';
-import { dataDir, loadEnv } from './config.mjs';
+import { dataDir, lastSyncJsonPath, lastSyncMarkdownPath, loadEnv } from './config.mjs';
 import { diagnoseSessionOptions } from './session.mjs';
 import { exportFeedArchive } from './export.mjs';
+import { loadLastSyncJson, loadLastSyncMarkdown } from './storage.mjs';
 
 export function buildDoctorSummary() {
   loadEnv();
@@ -58,4 +59,20 @@ export async function runExportCommand(flags = {}) {
     meta: await loadMeta(),
     dataDir: dataDir()
   });
+}
+
+export async function loadLastSyncPreview() {
+  const [json, markdown] = await Promise.all([loadLastSyncJson(), loadLastSyncMarkdown()]);
+  if (!json && !markdown) {
+    throw new Error('No last sync output found. Run `supertwee sync` first.');
+  }
+
+  return {
+    files: {
+      json: lastSyncJsonPath(),
+      markdown: lastSyncMarkdownPath()
+    },
+    json,
+    markdown
+  };
 }

@@ -1,14 +1,21 @@
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { parseExportFormats, validateExportOptions } from './export.mjs';
-import { buildDoctorSummary, runExportCommand, runSyncCommand, runTrendsCommand } from './commands.mjs';
+import { buildDoctorSummary, loadLastSyncPreview, runExportCommand, runSyncCommand, runTrendsCommand } from './commands.mjs';
 
 const MENU = [
   '1. sync feed',
-  '2. show trends',
-  '3. export archive',
-  '4. doctor',
-  '5. exit'
+  '2. preview last sync output',
+  '3. show trends',
+  '4. export archive',
+  '5. doctor',
+  '6. exit'
+];
+
+const PREVIEW_MENU = [
+  '1. preview markdown',
+  '2. preview json',
+  '3. back'
 ];
 
 function trimOrUndefined(value) {
@@ -19,8 +26,17 @@ function trimOrUndefined(value) {
 export function parseMenuSelection(value) {
   const normalized = String(value ?? '').trim();
   const choice = Number(normalized);
-  if (!Number.isInteger(choice) || choice < 1 || choice > 5) {
-    throw new Error('Select a number from 1 to 5.');
+  if (!Number.isInteger(choice) || choice < 1 || choice > 6) {
+    throw new Error('Select a number from 1 to 6.');
+  }
+  return choice;
+}
+
+export function parsePreviewSelection(value) {
+  const normalized = String(value ?? '').trim();
+  const choice = Number(normalized);
+  if (!Number.isInteger(choice) || choice < 1 || choice > 3) {
+    throw new Error('Select a number from 1 to 3.');
   }
   return choice;
 }
@@ -69,6 +85,18 @@ function renderMenu() {
   return ['supertwee ui', '', ...MENU, ''].join('\n');
 }
 
+function renderPreviewMenu(preview) {
+  return [
+    'last sync output',
+    '',
+    `markdown: ${preview.files.markdown}`,
+    `json: ${preview.files.json}`,
+    '',
+    ...PREVIEW_MENU,
+    ''
+  ].join('\n');
+}
+
 async function runSyncFlow(io, commands) {
   const pages = parseOptionalIntegerInput(await io.ask('Pages [default 5]: '), 'Pages', 1);
   const count = parseOptionalIntegerInput(await io.ask('Count per page [default 40]: '), 'Count', 1);
@@ -81,6 +109,7 @@ async function runSyncFlow(io, commands) {
     ...(ranking ? { ranking: true } : {})
   });
   io.print(JSON.stringify(result, null, 2));
+  await runPreviewLastSyncFlow(io, commands);
 }
 
 async function runTrendsFlow(io, commands) {
@@ -120,10 +149,33 @@ async function runDoctorFlow(io, commands) {
   io.print(JSON.stringify(commands.doctor(), null, 2));
 }
 
+async function runPreviewLastSyncFlow(io, commands) {
+  const preview = await commands.previewLastSync();
+
+  let viewing = true;
+  while (viewing) {
+    io.clear();
+    io.print(renderPreviewMenu(preview));
+    const selection = parsePreviewSelection(await io.ask('Choose a preview action: '));
+    if (selection === 1) {
+      io.print(preview.markdown ?? 'No markdown output found.');
+      await pause(io);
+      continue;
+    }
+    if (selection === 2) {
+      io.print(JSON.stringify(preview.json, null, 2));
+      await pause(io);
+      continue;
+    }
+    viewing = false;
+  }
+}
+
 export async function runInteractiveUi(options = {}) {
   const io = options.io ?? createNodeIo();
   const commands = options.commands ?? {
     doctor: buildDoctorSummary,
+    previewLastSync: loadLastSyncPreview,
     sync: runSyncCommand,
     trends: runTrendsCommand,
     export: runExportCommand
@@ -139,20 +191,23 @@ export async function runInteractiveUi(options = {}) {
         const selection = parseMenuSelection(await io.ask('Choose an action: '));
         if (selection === 1) {
           await runSyncFlow(io, commands);
-          await pause(io);
           continue;
         }
         if (selection === 2) {
+          await runPreviewLastSyncFlow(io, commands);
+          continue;
+        }
+        if (selection === 3) {
           await runTrendsFlow(io, commands);
           await pause(io);
           continue;
         }
-        if (selection === 3) {
+        if (selection === 4) {
           await runExportFlow(io, commands);
           await pause(io);
           continue;
         }
-        if (selection === 4) {
+        if (selection === 5) {
           await runDoctorFlow(io, commands);
           await pause(io);
           continue;

@@ -1,6 +1,7 @@
-import { HOME_LATEST_OPERATION, GRAPHQL_FEATURES, buildTimelineVariables, queryId } from './config.mjs';
+import { HOME_LATEST_OPERATION, GRAPHQL_FEATURES, buildTimelineVariables, lastSyncJsonPath, lastSyncMarkdownPath, queryId } from './config.mjs';
 import { buildHeaders, resolveSession } from './session.mjs';
-import { ensureDataDir, loadFeed, saveFeed, saveMeta } from './storage.mjs';
+import { ensureDataDir, loadFeed, saveFeed, saveLastSyncJson, saveLastSyncMarkdown, saveMeta } from './storage.mjs';
+import { renderRawSyncMarkdown } from './export.mjs';
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -215,6 +216,7 @@ export async function syncFeed(options = {}) {
 
   const existing = await loadFeed();
   let merged = existing;
+  const fetchedRecords = [];
   let cursor = options.cursor ?? null;
   let pagesFetched = 0;
   let totalFetched = 0;
@@ -229,6 +231,7 @@ export async function syncFeed(options = {}) {
     });
 
     merged = mergeFeedRecords(merged, result.records);
+    fetchedRecords.push(...result.records);
     pagesFetched += 1;
     totalFetched += result.records.length;
     cursor = result.nextCursor ?? null;
@@ -240,19 +243,26 @@ export async function syncFeed(options = {}) {
   }
 
   await saveFeed(merged);
+  const syncedAt = new Date().toISOString();
   await saveMeta({
-    syncedAt: new Date().toISOString(),
+    syncedAt,
     totalItems: merged.length,
     lastCursor: cursor,
     pagesFetched,
     queryId: queryId(),
     ranking: Boolean(options.enableRanking)
   });
+  await saveLastSyncJson(fetchedRecords);
+  await saveLastSyncMarkdown(`${renderRawSyncMarkdown(fetchedRecords, { syncedAt })}\n`);
 
   return {
     saved: merged.length,
     pagesFetched,
     fetchedThisRun: totalFetched,
-    lastCursor: cursor
+    lastCursor: cursor,
+    lastSyncFiles: {
+      json: lastSyncJsonPath(),
+      markdown: lastSyncMarkdownPath()
+    }
   };
 }

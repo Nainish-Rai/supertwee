@@ -16,7 +16,7 @@ it syncs your home timeline, saves it to disk, finds repeated topics, and ranks 
 - `sync` fetches pages from the x web timeline using the same internal graphql pattern the web app uses
 - `trends` extracts recurring topics, phrases, domains, hashtags, and standout tweets
 - `export` writes filtered local archive exports as `jsonl` and `markdown`
-- `ui` opens an interactive command hub in the terminal
+- `ui` opens an interactive command hub in the terminal, including raw last-sync preview
 - `doctor` shows which auth path supertwee can use on this machine
 
 ## quick start
@@ -48,8 +48,9 @@ node ./bin/supertwee.mjs ui
 1. `sync` reads your logged-in x browser session or manual cookies.
 2. it fetches timeline pages and stores normalized tweet records in `./data`.
 3. `trends` scores repeated patterns across the saved archive.
-4. `export` writes filtered slices as reusable `jsonl` plus a readable markdown report.
-5. `trends` highlights both topic momentum and top-performing tweets.
+4. each `sync` also writes the raw records fetched in that run to `last-sync.json` and `last-sync.md`.
+5. `export` writes filtered slices as reusable `jsonl` plus a readable markdown report.
+6. `trends` highlights both topic momentum and top-performing tweets.
 
 ## commands
 
@@ -112,7 +113,18 @@ export SUPERTWEE_DATA_DIR=/absolute/path
 
 exports are written to `./data/exports/<timestamp>/` unless `--out-dir` is provided.
 
-`supertwee ui` opens a dependency-free interactive menu for `sync`, `trends`, `export`, and `doctor`.
+each sync also refreshes:
+
+```bash
+./data/last-sync.json
+./data/last-sync.md
+```
+
+these files contain the raw records fetched in the current sync run only.
+
+`supertwee ui` opens a dependency-free interactive menu for `sync`, `preview last sync output`, `trends`, `export`, and `doctor`.
+
+when you run `sync` from `supertwee ui`, it automatically drops into a terminal-only preview menu for the latest raw markdown or json output.
 
 ## what makes a topic trend
 

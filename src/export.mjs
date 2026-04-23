@@ -122,6 +122,10 @@ function formatValue(value, fallback = 'none') {
   return value == null || value === '' ? fallback : String(value);
 }
 
+function toPrettyJson(value) {
+  return JSON.stringify(value, null, 2);
+}
+
 export function parseExportFormats(value) {
   if (value == null || value === '' || value === true) return [...DEFAULT_EXPORT_FORMATS];
   const rawValues = Array.isArray(value) ? value : String(value).split(',');
@@ -267,6 +271,38 @@ export function renderMarkdownExport(report, options = {}) {
   if (report.summary.recordCount === 0) {
     lines.push('## notes');
     lines.push('- no records matched the requested filters');
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+export function renderRawSyncMarkdown(records, options = {}) {
+  const syncedAt = options.syncedAt ?? new Date().toISOString();
+  const lines = [
+    '# supertwee last sync',
+    '',
+    `- synced at: ${syncedAt}`,
+    `- records fetched this run: ${records.length}`,
+    ''
+  ];
+
+  if (records.length === 0) {
+    lines.push('## records');
+    lines.push('- none');
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  lines.push('## records');
+  lines.push('');
+
+  for (const [index, record] of records.entries()) {
+    lines.push(`### ${index + 1}. ${record?.url ?? record?.id ?? 'record'}`);
+    lines.push('');
+    lines.push('```json');
+    lines.push(toPrettyJson(record));
+    lines.push('```');
     lines.push('');
   }
 

@@ -51,6 +51,14 @@ export function metaPath() {
   return path.join(dataDir(), 'feed-meta.json');
 }
 
+export function lastSyncJsonPath() {
+  return path.join(dataDir(), 'last-sync.json');
+}
+
+export function lastSyncMarkdownPath() {
+  return path.join(dataDir(), 'last-sync.md');
+}
+
 export function queryId() {
   return process.env.SUPERTWEE_HOME_LATEST_QUERY_ID || process.env.X_HOME_LATEST_QUERY_ID || DEFAULT_HOME_LATEST_QUERY_ID;
 }
