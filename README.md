@@ -24,6 +24,35 @@ it syncs your home timeline, saves it to disk, finds repeated topics, and ranks 
 
 ## quick start
 
+run it directly from npm:
+
+```bash
+npx supertwee doctor
+npx supertwee sync --pages 5 --count 40
+npx supertwee search posts --query "ai agents"
+npx supertwee user tweets --handle xdevelopers
+npx supertwee tweet thread --id 1346889436626259968
+npx supertwee trends
+npx supertwee export --since 2026-04-01 --format jsonl,md
+npx supertwee ui
+```
+
+or install it globally:
+
+```bash
+npm install -g supertwee
+supertwee doctor
+supertwee sync --pages 5 --count 40
+supertwee search posts --query "ai agents"
+supertwee user tweets --handle xdevelopers
+supertwee tweet thread --id 1346889436626259968
+supertwee trends
+supertwee export --since 2026-04-01 --format jsonl,md
+supertwee ui
+```
+
+if you want to run it from source instead:
+
 ```bash
 git clone https://github.com/Nainish-Rai/supertwee.git
 cd supertwee
@@ -39,7 +68,7 @@ supertwee export --since 2026-04-01 --format jsonl,md
 supertwee ui
 ```
 
-if you do not want to use `npm link`, run the cli directly:
+if you do not want to use `npm link`, run the repo-local cli directly:
 
 ```bash
 node ./bin/supertwee.mjs doctor
